@@ -1,154 +1,221 @@
 'use strict';
 
-/**************************************************************************************************
- *                                                                                                *
- * Plese read the following tutorial before implementing tasks:                                   *
- * https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Operators/Object_initializer *
- * https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Object        *
- *                                                                                                *
- **************************************************************************************************/
+/**********************************************************************************************
+ *                                                                                            *
+ * Plese read the following tutorial before implementing tasks:                               *
+ * https://developer.mozilla.org/en-US/docs/Web/JavaScript/Guide/Functions                    *
+ * https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Function  *
+ * https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Functions/arguments      *
+ * https://developer.mozilla.org/en-US/docs/Web/JavaScript/Closures                           *
+ *                                                                                            *
+ **********************************************************************************************/
 
 
 /**
- * Returns the rectagle object with width and height parameters and getArea() method
+ * Returns the functions composition of two specified functions f(x) and g(x).
+ * The result of compose is to be a function of one argument, (lets call the argument x),
+ * which works like applying function f to the result of applying function g to x, i.e.
+ *  getComposition(f,g)(x) = f(g(x))
  *
- * @param {number} width
- * @param {number} height
- * @return {Object}
+ * @param {Function} f
+ * @param {Function} g
+ * @return {Function}
  *
  * @example
- *    var r = new Rectangle(10,20);
- *    console.log(r.width);       // => 10
- *    console.log(r.height);      // => 20
- *    console.log(r.getArea());   // => 200
+ *   getComposition(Math.sin, Math.asin)(x) => Math.sin(Math.acos(x))
+ *
  */
-function Rectangle(width, height) {
-    this.width = width;
-    this.height = height;
-
-    this.getArea = () => {
-        return this.width * this.height
+function getComposition(f,g) {
+    return function (x) {
+        return f(g(x));
     }
 }
 
 
 /**
- * Returns the JSON representation of specified object
+ * Returns the math power function with the specified exponent
  *
- * @param {object} obj
- * @return {string}
+ * @param {number} exponent
+ * @return {Function}
  *
  * @example
- *    [1,2,3]   =>  '[1,2,3]'
- *    { width: 10, height : 20 } => '{"height":10,"width":20}'
+ *   var power2 = getPowerFunction(2); // => x^2
+ *   power2(2) => 4
+ *   power2(4) => 16
+ *
+ *   var power05 = getPowerFunction(0.5); // => x^0.5
+ *   power05(4) => 2
+ *   power05(16) => 4
+ *
  */
-function getJSON(obj) {
-    return JSON.stringify(obj);
+function getPowerFunction(exponent) {
+    return function (number) {
+        return Math.pow(number, exponent);
+    };
 }
 
 
 /**
- * Returns the object of specified type from JSON representation
+ * Returns the polynom function of one argument based on specified coefficients.
+ * See: https://en.wikipedia.org/wiki/Polynomial#Definition
  *
- * @param {Object} proto
- * @param {string} json
- * @return {object}
+ * @params {integer}
+ * @return {Function}
  *
  * @example
- *    var r = fromJSON(Rectangle.prototype, '{"width":10, "height":20}');
- *
+ *   getPolynom(2,3,5) => y = 2*x^2 + 3*x + 5
+ *   getPolynom(1,-3)  => y = x - 3
+ *   getPolynom(8)     => y = 8
+ *   getPolynom()      => null
  */
-function fromJSON(proto, json) {
-    throw new Error('Not implemented');
-    /*let obj = Object.create(proto);
-    obj =  JSON.parse(json);
-    return obj;*/
+function getPolynom() {
+    var tmp = Array.from(arguments).reverse();
+    return (x) => {
+        return tmp.reduce((prev, curr, index) => prev+curr*Math.pow(x,index),0);
+    };
 }
 
 
 /**
- * Css selectors builder
+ * Memoizes passed function and returns function
+ * which invoked first time calls the passed function and then always returns cached result.
  *
- * Each complex selector can consists of type, id, class, attribute, pseudo-class and pseudo-element selectors:
+ * @params {Function} func - function to memoize
+ * @return {Function} memoized function
  *
- *    element#id.class[attr]:pseudoClass::pseudoElement
- *              \----/\----/\----------/
- *              Can be several occurences
+ * @example
+ *   var memoizer = memoize(() => Math.random());
+ *   memoizer() => some random number  (first run, evaluates the result of Math.random())
+ *   memoizer() => the same random number  (second run, returns the previous cached result)
+ *   ...
+ *   memoizer() => the same random number  (next run, returns the previous cached result)
+ */
+function memoize(func) {
+    let cashed = func();
+    return function() {
+        return cashed
+    }
+}
+
+
+/**
+ * Returns the function trying to call the passed function and if it throws,
+ * retrying it specified number of attempts.
  *
- * All types of selectors can be combined using the combinators ' ','+','~','>' .
+ * @param {Function} func
+ * @param {number} attempts
+ * @return {Function}
  *
- * The task is to design a single class, independent classes or classes hierarchy and implement the functionality
- * to build the css selectors using the provided cssSelectorBuilder.
- * Each selector should have the stringify() method to output the string repsentation according to css specification.
+ * @example
+ * var attempt = 0, retryer = retry(() => {
+ *      if (++attempt % 2) throw new Error('test');
+ *      else return attempt;
+ * }, 2);
+ * retryer() => 2
+ */
+function retry(func, attempts) {
+    return()=>{
+        for (var i = 0; i < attempts;){
+            try{
+                return func();
+            } catch(err){
+                i += 1;
+            }
+        }
+        return i;
+    };
+}
+
+
+/**
+ * Returns the logging wrapper for the specified method,
+ * Logger has to log the start and end of calling the specified function.
+ * Logger has to log the arguments of invoked function.
+ * The fromat of output log is:
+ * <function name>(<arg1>, <arg2>,...,<argN>) starts
+ * <function name>(<arg1>, <arg2>,...,<argN>) ends
  *
- * Provided cssSelectorBuilder should be used as facade only to create your own classes,
- * for example the first method of cssSelectorBuilder can be like this:
- *   element: function(value) {
- *       return new MySuperBaseElementSelector(...)...
- *   },
  *
- * The design of class(es) is totally up to you, but try to make it as simple, clear and readable as possible.
+ * @param {Function} func
+ * @param {Function} logFunc - function to output log with single string argument
+ * @return {Function}
  *
  * @example
  *
- *  var builder = cssSelectorBuilder;
+ * var cosLogger = logger(Math.cos, console.log);
+ * var result = cosLogger(Math.PI));     // -1
  *
- *  builder.id('main').class('container').class('editable').stringify()  => '#main.container.editable'
+ * log from console.log:
+ * cos(3.141592653589793) starts
+ * cos(3.141592653589793) ends
  *
- *  builder.element('a').attr('href$=".png"').pseudoClass('focus').stringify()  => 'a[href$=".png"]:focus'
- *
- *  builder.combine(
- *      builder.element('div').id('main').class('container').class('draggable'),
- *      '+',
- *      builder.combine(
- *          builder.element('table').id('data'),
- *          '~',
- *           builder.combine(
- *               builder.element('tr').pseudoClass('nth-of-type(even)'),
- *               ' ',
- *               builder.element('td').pseudoClass('nth-of-type(even)')
- *           )
- *      )
- *  ).stringify()        =>    'div#main.container.draggable + table#data ~ tr:nth-of-type(even)   td:nth-of-type(even)'
- *
- *  For more examples see unit tests.
  */
+function logger(func, logFunc) {
+    return function(){
+        let tmp = Array.from(arguments);
+        let callStr = JSON.stringify(tmp);
+        callStr = callStr.substr(1, callStr.length - 2);
+        callStr = `${func.name}(${callStr})`;
+        logFunc(callStr + " starts");
+        let res = func.apply(null, tmp);
+        logFunc(callStr + " ends");
+        return res;
+    }
+}
 
-const cssSelectorBuilder = {
 
-    element: function(value) {
-        throw new Error('Not implemented');
-    },
+/**
+ * Return the function with partial applied arguments
+ *
+ * @param {Function} fn
+ * @return {Function}
+ *
+ * @example
+ *   var fn = function(x1,x2,x3,x4) { return  x1 + x2 + x3 + x4; };
+ *   partialUsingArguments(fn, 'a')('b','c','d') => 'abcd'
+ *   partialUsingArguments(fn, 'a','b')('c','d') => 'abcd'
+ *   partialUsingArguments(fn, 'a','b','c')('d') => 'abcd'
+ *   partialUsingArguments(fn, 'a','b','c','d')() => 'abcd'
+ */
+function partialUsingArguments(fn) {
+    var applyArgs = Array.prototype.slice.call(arguments, 1);
+    return function() {
+        return fn.apply(null, Array.prototype.concat(applyArgs, Array.prototype.slice.call(arguments)));
+    };
+}
 
-    id: function(value) {
-        throw new Error('Not implemented');
-    },
 
-    class: function(value) {
-        throw new Error('Not implemented');
-    },
-
-    attr: function(value) {
-        throw new Error('Not implemented');
-    },
-
-    pseudoClass: function(value) {
-        throw new Error('Not implemented');
-    },
-
-    pseudoElement: function(value) {
-        throw new Error('Not implemented');
-    },
-
-    combine: function(selector1, combinator, selector2) {
-        throw new Error('Not implemented');
-    },
-};
+/**
+ * Returns the id generator function that returns next integer starting from specified number every time when invoking.
+ *
+ * @param {Number} startFrom
+ * @return {Function}
+ *
+ * @example
+ *   var getId4 = getIdGenerator(4);
+ *   var getId10 = gerIdGenerator(10);
+ *   getId4() => 4
+ *   getId10() => 10
+ *   getId4() => 5
+ *   getId4() => 6
+ *   getId4() => 7
+ *   getId10() => 11
+ */
+function getIdGeneratorFunction(startFrom) {
+    var curr = startFrom;
+    return function() {
+        return startFrom++;
+    }
+}
 
 
 module.exports = {
-    Rectangle: Rectangle,
-    getJSON: getJSON,
-    fromJSON: fromJSON,
-    cssSelectorBuilder: cssSelectorBuilder
+    getComposition: getComposition,
+    getPowerFunction: getPowerFunction,
+    getPolynom: getPolynom,
+    memoize: memoize,
+    retry: retry,
+    logger: logger,
+    partialUsingArguments: partialUsingArguments,
+    getIdGeneratorFunction: getIdGeneratorFunction,
 };
